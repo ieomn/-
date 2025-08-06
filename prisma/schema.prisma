@@ -1,0 +1,219 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// User Profile
+model UserProfile {
+  id         String   @id @default(cuid())
+  email      String   @unique
+  fullName   String?  @map("full_name")
+  role       String   @default("OPERATOR") // "ADMIN", "ENGINEER", "OPERATOR"
+  department String?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  uploadedFiles   UploadedFile[]
+  testSessions    TestSession[]   @relation("SessionOperator")
+  analysisResults AnalysisResult[] @relation("SessionAnalyst")
+
+  @@map("user_profiles")
+}
+
+// Machine Category
+model MachineCategory {
+  id          String   @id @default(cuid())
+  name        String
+  code        String   @unique
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  models MachineModel[]
+
+  @@map("machine_categories")
+}
+
+model MachineModel {
+  id             String   @id @default(cuid())
+  categoryId     String   @map("category_id")
+  name           String
+  code           String
+  description    String?
+  specifications String?  // JSON string for specifications
+  imageUrl       String?  @map("image_url")
+  status         String   @default("ACTIVE") // "ACTIVE", "INACTIVE", "MAINTENANCE"
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  category   MachineCategory    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  components MachineComponent[]
+  sessions   TestSession[]
+
+  @@map("machine_models")
+}
+
+model MachineComponent {
+  id          String   @id @default(cuid())
+  modelId     String   @map("model_id")
+  name        String
+  code        String
+  description String?
+  parameters  String?  // JSON string for parameters
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  model    MachineModel  @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  sessions TestSession[]
+
+  @@map("machine_components")
+}
+
+// Test Session
+model TestSession {
+  id           String    @id @default(cuid())
+  modelId      String    @map("model_id")
+  componentId  String?   @map("component_id")
+  operatorId   String?   @map("operator_id")
+  sessionName  String    @map("session_name")
+  description  String?
+  testType     String    @default("PERFORMANCE") // "PERFORMANCE", "STRESS", "VIBRATION", "THERMAL"
+  status       String    @default("PLANNING") // "PLANNING", "RUNNING", "COMPLETED", "FAILED"
+  startedAt    DateTime? @map("started_at")
+  completedAt  DateTime? @map("completed_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  model           MachineModel      @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  component       MachineComponent? @relation(fields: [componentId], references: [id], onDelete: SetNull)
+  operator        UserProfile?      @relation("SessionOperator", fields: [operatorId], references: [id], onDelete: SetNull)
+  simulationData  SimulationData[]
+  testData        TestData[]
+  comparisons     DataComparison[]
+  analysisResults AnalysisResult[]
+  uploadedFiles   UploadedFile[]
+
+  @@map("test_sessions")
+}
+
+// Simulation Data
+model SimulationData {
+  id             String   @id @default(cuid())
+  sessionId      String   @map("session_id")
+  parameterName  String   @map("parameter_name")
+  parameterValue Float    @map("parameter_value")
+  unit           String
+  timestamp      DateTime @default(now())
+  metadata       String?  // JSON string for metadata
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  // Relations
+  session TestSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("simulation_data")
+}
+
+// Test Data
+model TestData {
+  id                     String   @id @default(cuid())
+  sessionId              String   @map("session_id")
+  parameterName          String   @map("parameter_name")
+  parameterValue         Float    @map("parameter_value")
+  unit                   String
+  measurementTimestamp   DateTime @map("measurement_timestamp")
+  measurementConditions  String?  @map("measurement_conditions") // JSON string
+  accuracyGrade          String?  @map("accuracy_grade")
+  createdAt              DateTime @default(now()) @map("created_at")
+
+  // Relations
+  session TestSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("test_data")
+}
+
+// Data Comparison
+model DataComparison {
+  id                    String   @id @default(cuid())
+  sessionId             String   @map("session_id")
+  parameterName         String   @map("parameter_name")
+  simulationValue       Float    @map("simulation_value")
+  testValue             Float    @map("test_value")
+  unit                  String
+  absoluteError         Float    @map("absolute_error")
+  relativeErrorPercent  Float    @map("relative_error_percent")
+  toleranceMet          Boolean  @map("tolerance_met")
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  // Relations
+  session TestSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("data_comparisons")
+}
+
+// Analysis Result
+model AnalysisResult {
+  id              String   @id @default(cuid())
+  sessionId       String   @map("session_id")
+  analystId       String?  @map("analyst_id")
+  analysisType    String   @map("analysis_type") // "COMPARISON", "TREND", "STATISTICAL"
+  results         String   // JSON string for results
+  summary         String?
+  conclusions     String?
+  recommendations String?
+  confidenceLevel Float?   @map("confidence_level")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relations
+  session TestSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  analyst UserProfile? @relation("SessionAnalyst", fields: [analystId], references: [id], onDelete: SetNull)
+
+  @@map("analysis_results")
+}
+
+// Uploaded File
+model UploadedFile {
+  id                String   @id @default(cuid())
+  sessionId         String?  @map("session_id")
+  uploaderId        String?  @map("uploader_id")
+  fileName          String   @map("file_name")
+  filePath          String   @map("file_path")
+  fileSize          Int      @map("file_size")
+  fileType          String   @map("file_type")
+  mimeType          String?  @map("mime_type")
+  fileHash          String?  @map("file_hash")
+  status            String   @default("UPLOADED") // "UPLOADED", "PROCESSING", "PROCESSED", "ERROR"
+  processingResults String?  @map("processing_results") // JSON string
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  session  TestSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  uploader UserProfile? @relation(fields: [uploaderId], references: [id], onDelete: SetNull)
+
+  @@map("uploaded_files")
+}
+
+// System Statistics
+model SystemStatistic {
+  id           String   @id @default(cuid())
+  metricName   String   @unique @map("metric_name")
+  metricValue  Float    @map("metric_value")
+  metricType   String   @map("metric_type") // "COUNT", "AVERAGE", "PERCENTAGE"
+  calculatedAt DateTime @default(now()) @map("calculated_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("system_statistics")
+}
