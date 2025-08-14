@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { Settings, User, Mail, Lock, Bell, Monitor, Palette, Save } from "lucide-react";
 
 export const SettingsPage = () => {
-  const { user } = useAuth();
+  const { user, updateProfile } = useAuth();
   const [settings, setSettings] = useState({
     notifications: true,
     autoSave: true,
@@ -28,13 +28,46 @@ export const SettingsPage = () => {
   });
 
   const handleSaveSettings = () => {
-    // 这里可以连接到后端保存设置
+    // 注意：这里保存的是系统设置，不是用户信息
+    // 可以后续添加系统设置的API
+    console.log('💾 保存系统设置:', settings);
     toast.success('设置已保存');
   };
 
-  const handleSaveProfile = () => {
-    // 这里可以连接到后端更新用户信息
-    toast.success('个人信息已更新');
+  const handleSaveProfile = async () => {
+    try {
+      console.log('💾 系统设置页面保存用户信息:', profile);
+      
+      // 检查 updateProfile 函数是否可用
+      if (!updateProfile) {
+        console.error('❌ updateProfile 函数不可用');
+        toast.error('用户认证服务不可用，请刷新页面重试');
+        return;
+      }
+      
+      // 验证必填字段
+      if (!profile.name || profile.name.trim() === '') {
+        toast.error('用户名不能为空');
+        return;
+      }
+      
+      console.log('🚀 系统设置页面开始调用 updateProfile...');
+      await updateProfile({ 
+        fullName: profile.name.trim()
+      });
+      
+      console.log('✅ 系统设置页面 updateProfile 调用成功');
+      toast.success('个人信息已更新');
+    } catch (error) {
+      console.error('❌ 系统设置页面保存失败详细错误:', error);
+      
+      // 提供更详细的错误信息
+      if (error instanceof Error) {
+        toast.error(`保存失败: ${error.message}`);
+      } else {
+        toast.error('保存失败，请重试');
+      }
+    }
   };
 
   return (

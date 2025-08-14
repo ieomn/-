@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { NavLink } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { 
   User, 
@@ -25,20 +25,70 @@ import {
 } from "lucide-react";
 
 export const UserProfilePage = () => {
-  const { user } = useAuth();
+  const { user, profile: authProfile, updateProfile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
-  const [profile, setProfile] = useState({
-    name: user?.user_metadata?.name || '',
-    email: user?.email || '',
+  const [localProfile, setLocalProfile] = useState({
+    name: '',
+    email: '',
     company: '精密制造科技有限公司',
-    department: '机床工程部',
+    department: '',
     position: '高级工程师'
   });
 
-  const handleSaveProfile = () => {
-    // 这里可以连接到后端更新用户信息
-    toast.success('个人信息已更新');
-    setIsEditing(false);
+  // 同步 AuthProvider 的用户信息到本地状态
+  useEffect(() => {
+    if (authProfile) {
+      setLocalProfile({
+        name: authProfile.fullName || '',
+        email: authProfile.email || '',
+        company: '精密制造科技有限公司',
+        department: authProfile.department || '',
+        position: '高级工程师'
+      });
+    }
+  }, [authProfile]);
+
+  const handleSaveProfile = async () => {
+    try {
+      console.log('💾 个人中心保存信息:', localProfile);
+      
+      // 检查 updateProfile 函数是否可用
+      if (!updateProfile) {
+        console.error('❌ updateProfile 函数不可用');
+        toast.error('用户认证服务不可用，请刷新页面重试');
+        return;
+      }
+      
+      // 验证必填字段
+      if (!localProfile.name || localProfile.name.trim() === '') {
+        toast.error('用户名不能为空');
+        return;
+      }
+      
+      if (!localProfile.department || localProfile.department.trim() === '') {
+        toast.error('部门不能为空');
+        return;
+      }
+      
+      console.log('🚀 个人中心开始调用 updateProfile...');
+      await updateProfile({ 
+        fullName: localProfile.name.trim(),
+        department: localProfile.department.trim()
+      });
+      
+      console.log('✅ 个人中心 updateProfile 调用成功');
+      toast.success('个人信息已更新');
+      setIsEditing(false);
+    } catch (error) {
+      console.error('❌ 个人中心保存失败详细错误:', error);
+      
+      // 提供更详细的错误信息
+      if (error instanceof Error) {
+        toast.error(`保存失败: ${error.message}`);
+      } else {
+        toast.error('保存失败，请重试');
+      }
+    }
   };
 
   const userStats = {
@@ -74,15 +124,15 @@ export const UserProfilePage = () => {
             <CardContent className="p-6">
               <div className="flex flex-col items-center text-center">
                 <Avatar className="w-24 h-24 mb-4">
-                  <AvatarImage src="" alt={user?.user_metadata?.name || 'User'} />
+                  <AvatarImage src="" alt={authProfile?.fullName || 'User'} />
                   <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
-                    {(user?.user_metadata?.name || user?.email || 'U').charAt(0).toUpperCase()}
+                    {(authProfile?.fullName || authProfile?.email || 'U').charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <h2 className="text-xl font-semibold mb-1">
-                  {user?.user_metadata?.name || '用户'}
+                  {authProfile?.fullName || '用户'}
                 </h2>
-                <p className="text-muted-foreground mb-4">{user?.email}</p>
+                <p className="text-muted-foreground mb-4">{authProfile?.email}</p>
                 <Badge className="mb-4">高级用户</Badge>
                 <Button variant="outline" className="w-full hover-scale" asChild>
                   <NavLink to="/account">
@@ -115,8 +165,8 @@ export const UserProfilePage = () => {
                     <Label htmlFor="name">姓名</Label>
                     <Input
                       id="name"
-                      value={profile.name}
-                      onChange={(e) => setProfile(prev => ({ ...prev, name: e.target.value }))}
+                      value={localProfile.name}
+                      onChange={(e) => setLocalProfile(prev => ({ ...prev, name: e.target.value }))}
                     />
                   </div>
                   <div>
@@ -124,32 +174,32 @@ export const UserProfilePage = () => {
                     <Input
                       id="email"
                       type="email"
-                      value={profile.email}
-                      onChange={(e) => setProfile(prev => ({ ...prev, email: e.target.value }))}
+                      value={localProfile.email}
+                      onChange={(e) => setLocalProfile(prev => ({ ...prev, email: e.target.value }))}
                     />
                   </div>
                   <div>
                     <Label htmlFor="company">公司</Label>
                     <Input
                       id="company"
-                      value={profile.company}
-                      onChange={(e) => setProfile(prev => ({ ...prev, company: e.target.value }))}
+                      value={localProfile.company}
+                      onChange={(e) => setLocalProfile(prev => ({ ...prev, company: e.target.value }))}
                     />
                   </div>
                   <div>
                     <Label htmlFor="department">部门</Label>
                     <Input
                       id="department"
-                      value={profile.department}
-                      onChange={(e) => setProfile(prev => ({ ...prev, department: e.target.value }))}
+                      value={localProfile.department}
+                      onChange={(e) => setLocalProfile(prev => ({ ...prev, department: e.target.value }))}
                     />
                   </div>
                   <div>
                     <Label htmlFor="position">职位</Label>
                     <Input
                       id="position"
-                      value={profile.position}
-                      onChange={(e) => setProfile(prev => ({ ...prev, position: e.target.value }))}
+                      value={localProfile.position}
+                      onChange={(e) => setLocalProfile(prev => ({ ...prev, position: e.target.value }))}
                     />
                   </div>
                   <div className="flex gap-2">
@@ -173,7 +223,7 @@ export const UserProfilePage = () => {
                     <Mail className="w-5 h-5 text-muted-foreground" />
                     <div>
                       <p className="text-sm text-muted-foreground">邮箱</p>
-                      <p className="font-medium">{profile.email}</p>
+                      <p className="font-medium">{authProfile?.email || '未设置'}</p>
                     </div>
                   </div>
                   <Separator />
@@ -181,7 +231,7 @@ export const UserProfilePage = () => {
                     <Briefcase className="w-5 h-5 text-muted-foreground" />
                     <div>
                       <p className="text-sm text-muted-foreground">公司</p>
-                      <p className="font-medium">{profile.company}</p>
+                      <p className="font-medium">精密制造科技有限公司</p>
                     </div>
                   </div>
                   <Separator />
@@ -189,7 +239,7 @@ export const UserProfilePage = () => {
                     <MapPin className="w-5 h-5 text-muted-foreground" />
                     <div>
                       <p className="text-sm text-muted-foreground">部门</p>
-                      <p className="font-medium">{profile.department}</p>
+                      <p className="font-medium">{authProfile?.department || '未设置'}</p>
                     </div>
                   </div>
                   <Separator />
@@ -197,14 +247,14 @@ export const UserProfilePage = () => {
                     <User className="w-5 h-5 text-muted-foreground" />
                     <div>
                       <p className="text-sm text-muted-foreground">职位</p>
-                      <p className="font-medium">{profile.position}</p>
+                      <p className="font-medium">高级工程师</p>
                     </div>
                   </div>
                   <Separator />
                   <div className="flex items-center gap-3">
                     <Calendar className="w-5 h-5 text-muted-foreground" />
                     <div>
-                      <p className="text-sm text-muted-foreground">注册时间</p>
+                      <p className="text-sm text-muted-foreground">加入时间</p>
                       <p className="font-medium">{userStats.memberSince}</p>
                     </div>
                   </div>
@@ -214,60 +264,34 @@ export const UserProfilePage = () => {
           </Card>
         </div>
 
-        {/* 主要内容区域 */}
+        {/* 使用统计 */}
         <div className="lg:col-span-2 space-y-6">
-          {/* 使用统计 */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card className="hover-scale">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <BarChart3 className="w-8 h-8 text-primary" />
-                  <div>
-                    <p className="text-2xl font-bold">{userStats.totalAnalysis}</p>
-                    <p className="text-xs text-muted-foreground">分析次数</p>
-                  </div>
+          <Card className="hover-scale">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="w-5 h-5" />
+                使用统计
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-primary mb-2">{userStats.totalAnalysis}</div>
+                  <p className="text-sm text-muted-foreground">分析次数</p>
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card className="hover-scale">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <Database className="w-8 h-8 text-success" />
-                  <div>
-                    <p className="text-2xl font-bold">{userStats.dataUploaded}GB</p>
-                    <p className="text-xs text-muted-foreground">数据上传</p>
-                  </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-primary mb-2">{userStats.dataUploaded}GB</div>
+                  <p className="text-sm text-muted-foreground">数据上传</p>
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card className="hover-scale">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <Activity className="w-8 h-8 text-warning" />
-                  <div>
-                    <p className="text-2xl font-bold">98%</p>
-                    <p className="text-xs text-muted-foreground">在线时长</p>
-                  </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-primary mb-2">98%</div>
+                  <p className="text-sm text-muted-foreground">分析准确率</p>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </CardContent>
+          </Card>
 
-            <Card className="hover-scale">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <Clock className="w-8 h-8 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-bold">2小时前</p>
-                    <p className="text-xs text-muted-foreground">最后活动</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* 最近活动 */}
+          {/* 活动记录 */}
           <Card className="hover-scale">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -278,7 +302,7 @@ export const UserProfilePage = () => {
             <CardContent>
               <div className="space-y-4">
                 {userStats.recentActivity.map((activity, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 border border-border rounded-lg hover:bg-muted/30 transition-colors">
+                  <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                     <div className="flex items-center gap-3">
                       <div className="w-2 h-2 bg-primary rounded-full"></div>
                       <div>
@@ -286,59 +310,66 @@ export const UserProfilePage = () => {
                         <p className="text-sm text-muted-foreground">{activity.model}</p>
                       </div>
                     </div>
-                    <Badge variant="outline">{activity.time}</Badge>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Clock className="w-4 h-4" />
+                      <span className="text-sm">{activity.time}</span>
+                    </div>
                   </div>
                 ))}
               </div>
             </CardContent>
           </Card>
 
-          {/* 常用型号 */}
+          {/* 收藏模型 */}
           <Card className="hover-scale">
             <CardHeader>
-              <CardTitle>常用机床型号</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Database className="w-5 h-5" />
+                收藏模型
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex gap-2 flex-wrap">
                 {userStats.favoriteModels.map((model, index) => (
                   <Badge key={index} variant="secondary" className="hover-scale cursor-pointer">
                     {model}
                   </Badge>
                 ))}
-                <Button variant="outline" size="sm" className="hover-scale">
-                  + 添加
-                </Button>
               </div>
             </CardContent>
           </Card>
 
-          {/* 权限信息 */}
+          {/* 快速操作 */}
           <Card className="hover-scale">
             <CardHeader>
-              <CardTitle>账户权限</CardTitle>
+              <CardTitle>快速操作</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-success rounded-full"></div>
-                  <span className="text-sm">数据查看</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-success rounded-full"></div>
-                  <span className="text-sm">数据编辑</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-success rounded-full"></div>
-                  <span className="text-sm">数据导出</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-warning rounded-full"></div>
-                  <span className="text-sm">用户管理</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-destructive rounded-full"></div>
-                  <span className="text-sm">系统配置</span>
-                </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Button variant="outline" className="h-20 flex-col gap-2 hover-scale" asChild>
+                  <NavLink to="/upload">
+                    <Database className="w-6 h-6" />
+                    <span className="text-sm">数据上传</span>
+                  </NavLink>
+                </Button>
+                <Button variant="outline" className="h-20 flex-col gap-2 hover-scale" asChild>
+                  <NavLink to="/analysis">
+                    <BarChart3 className="w-6 h-6" />
+                    <span className="text-sm">数据分析</span>
+                  </NavLink>
+                </Button>
+                <Button variant="outline" className="h-20 flex-col gap-2 hover-scale" asChild>
+                  <NavLink to="/account">
+                    <Settings className="w-6 h-6" />
+                    <span className="text-sm">账户设置</span>
+                  </NavLink>
+                </Button>
+                <Button variant="outline" className="h-20 flex-col gap-2 hover-scale" asChild>
+                  <NavLink to="/settings">
+                    <User className="w-6 h-6" />
+                    <span className="text-sm">系统配置</span>
+                  </NavLink>
+                </Button>
               </div>
             </CardContent>
           </Card>

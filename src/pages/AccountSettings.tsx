@@ -27,13 +27,42 @@ export const AccountSettings = () => {
   const handleSaveProfile = async () => {
     try {
       console.log('💾 保存基本信息:', profile);
-      if (updateProfile) {
-        await updateProfile({ fullName: profile.name, department: profile.department });
+      
+      // 检查 updateProfile 函数是否可用
+      if (!updateProfile) {
+        console.error('❌ updateProfile 函数不可用');
+        toast.error('用户认证服务不可用，请刷新页面重试');
+        return;
       }
+      
+      // 验证必填字段
+      if (!profile.name || profile.name.trim() === '') {
+        toast.error('用户名不能为空');
+        return;
+      }
+      
+      if (!profile.department || profile.department.trim() === '') {
+        toast.error('部门不能为空');
+        return;
+      }
+      
+      console.log('🚀 开始调用 updateProfile...');
+      await updateProfile({ 
+        fullName: profile.name.trim(), 
+        department: profile.department.trim() 
+      });
+      
+      console.log('✅ updateProfile 调用成功');
       toast.success('基本信息已保存');
     } catch (error) {
-      console.error('保存失败:', error);
-      toast.error('保存失败，请重试');
+      console.error('❌ 保存失败详细错误:', error);
+      
+      // 提供更详细的错误信息
+      if (error instanceof Error) {
+        toast.error(`保存失败: ${error.message}`);
+      } else {
+        toast.error('保存失败，请重试');
+      }
     }
   };
 

@@ -58,12 +58,87 @@ app.get('/api/users/demo', asyncHandler(async (req, res) => {
   res.json(demoUser);
 }));
 
-// 获取所有用户
+// 获取用户列表 (支持按角色过滤)
 app.get('/api/users', asyncHandler(async (req, res) => {
-  const users = await prisma.userProfile.findMany({
+  const { role, limit, offset } = req.query;
+  
+  // 构建查询条件
+  const where = {};
+  if (role) {
+    where.role = role;
+    console.log(`🔍 按角色查询用户: ${role}`);
+  }
+  
+  // 构建查询选项
+  const queryOptions = {
+    where,
     orderBy: { createdAt: 'desc' }
-  });
+  };
+  
+  if (limit) {
+    queryOptions.take = parseInt(limit);
+  }
+  
+  if (offset) {
+    queryOptions.skip = parseInt(offset);
+  }
+  
+  console.log('📋 用户查询参数:', queryOptions);
+  
+  const users = await prisma.userProfile.findMany(queryOptions);
+  
+  console.log(`✅ 查询到 ${users.length} 个用户`);
+  if (role) {
+    console.log(`🎭 角色为 ${role} 的用户:`, users.map(u => ({ id: u.id, name: u.fullName, email: u.email })));
+  }
+  
   res.json(users);
+}));
+
+// 创建新用户
+app.post('/api/users', asyncHandler(async (req, res) => {
+  const { email, fullName, role, department } = req.body;
+  
+  console.log('🚀 创建新用户请求:', { email, fullName, role, department });
+  
+  // 验证必填字段
+  if (!email || !fullName || !role) {
+    return res.status(400).json({
+      error: '缺少必填字段',
+      message: 'email, fullName, role 为必填字段'
+    });
+  }
+  
+  // 检查邮箱是否已存在
+  const existingUser = await prisma.userProfile.findUnique({
+    where: { email }
+  });
+  
+  if (existingUser) {
+    console.log(`✅ 用户已存在，返回现有用户: ${existingUser.email}`);
+    return res.json(existingUser);
+  }
+  
+  // 创建新用户
+  try {
+    const newUser = await prisma.userProfile.create({
+      data: {
+        email,
+        fullName,
+        role,
+        department: department || '技术部'
+      }
+    });
+    
+    console.log(`✅ 成功创建新用户: ${newUser.email} (${newUser.fullName})`);
+    res.status(201).json(newUser);
+  } catch (error) {
+    console.error('❌ 创建用户失败:', error);
+    res.status(500).json({
+      error: '创建用户失败',
+      message: error.message
+    });
+  }
 }));
 
 // 更新用户资料

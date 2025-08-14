@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { NavLink } from "react-router-dom";
 
 export const Header = () => {
-  const { user, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
 
   const handleSignOut = async () => {
     try {
@@ -60,13 +60,14 @@ export const Header = () => {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="text-header-text hover:bg-white/10">
               <User className="w-4 h-4 mr-2" />
-              {user?.user_metadata?.name || user?.email || '用户'}
+              {profile?.fullName || profile?.email || '用户'}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <div className="px-2 py-1.5">
-              <p className="text-sm font-medium">{user?.user_metadata?.name || '用户'}</p>
-              <p className="text-xs text-muted-foreground">{user?.email}</p>
+              <p className="text-sm font-medium">{profile?.fullName || '用户'}</p>
+              <p className="text-xs text-muted-foreground">{profile?.email}</p>
+              <p className="text-xs text-muted-foreground">{profile?.department}</p>
             </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
