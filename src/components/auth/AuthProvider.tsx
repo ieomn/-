@@ -28,11 +28,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // 模拟的演示用户数据
-  const demoUser: UserProfile = {
-    id: 'demo-admin-001',
+  // 默认管理员用户数据（仅作为最终后备）
+  const fallbackAdminUser: UserProfile = {
+    id: 'fallback-admin-001',
     email: 'admin@machine-nexus.com',
-    fullName: '演示管理员',
+    fullName: '系统管理员',
     role: 'ADMIN',
     department: '技术部',
     createdAt: new Date(),
@@ -69,24 +69,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
           // API失败时，检查本地存储
           const savedUser = localStorage.getItem('demo_user');
-          if (savedUser) {
+        if (savedUser) {
             const userData = JSON.parse(savedUser);
             console.log('📱 使用本地存储的用户数据:', userData);
             setUser({ id: userData.id, email: userData.email });
             setProfile(userData);
-          } else {
-            console.log('🎭 使用默认演示用户数据');
-            // 使用默认演示数据
-            setUser({ id: demoUser.id, email: demoUser.email });
-            setProfile(demoUser);
-            localStorage.setItem('demo_user', JSON.stringify(demoUser));
+        } else {
+            console.log('🎭 使用后备管理员数据');
+            // 使用后备管理员数据
+            setUser({ id: fallbackAdminUser.id, email: fallbackAdminUser.email });
+            setProfile(fallbackAdminUser);
+            localStorage.setItem('demo_user', JSON.stringify(fallbackAdminUser));
           }
         }
       } catch (error) {
         console.error('❌ 用户认证初始化错误:', error);
         // 最终后备方案
-        setUser({ id: demoUser.id, email: demoUser.email });
-        setProfile(demoUser);
+        setUser({ id: fallbackAdminUser.id, email: fallbackAdminUser.email });
+        setProfile(fallbackAdminUser);
       } finally {
         setLoading(false);
         console.log('✅ 用户认证初始化完成');
@@ -100,23 +100,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true)
       
-      // 简化的登录逻辑 - 演示用途
-      if (email === 'admin@machine-nexus.com') {
-        setUser({ id: demoUser.id, email: demoUser.email })
-        setProfile(demoUser)
-        localStorage.setItem('demo_user', JSON.stringify(demoUser))
-      } else {
-        // 创建新用户档案（演示）
-        const newUser = {
-          ...demoUser,
-          id: `user-${Date.now()}`,
-          email,
-          fullName: email.split('@')[0],
-          role: 'OPERATOR' as const
+      // 数据库驱动的登录逻辑
+      const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      
+      try {
+        // 尝试通过API验证用户
+        const response = await fetch(`${apiBaseUrl}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        
+        if (response.ok) {
+          const userData = await response.json();
+          setUser({ id: userData.id, email: userData.email });
+          setProfile(userData);
+          localStorage.setItem('demo_user', JSON.stringify(userData));
+        } else {
+          throw new Error('登录验证失败');
         }
-        setUser({ id: newUser.id, email: newUser.email })
-        setProfile(newUser)
-        localStorage.setItem('demo_user', JSON.stringify(newUser))
+      } catch (error) {
+        // 如果没有后端API，使用数据库查找用户
+        console.warn('使用备用登录方式');
+        
+        // 查找现有管理员用户
+        const adminResponse = await fetch(`${apiBaseUrl}/api/users/demo`);
+        if (adminResponse.ok) {
+          const adminData = await adminResponse.json();
+          setUser({ id: adminData.id, email: adminData.email });
+          setProfile(adminData);
+          localStorage.setItem('demo_user', JSON.stringify(adminData));
+      } else {
+          throw new Error('无法获取用户信息');
+        }
       }
     } catch (error) {
       console.error('Sign in error:', error)

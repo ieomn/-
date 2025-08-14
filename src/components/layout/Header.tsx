@@ -30,7 +30,7 @@ export const Header = () => {
           <span className="text-white font-bold text-lg">MT</span>
         </div>
         <div>
-          <h1 className="text-xl font-semibold">精密制造科技有限公司</h1>
+          <h1 className="text-xl font-semibold">通用技术集团机床工程研究院</h1>
           <p className="text-sm text-header-text/70">机床性能数据管理与分析平台</p>
         </div>
         <Button variant="ghost" size="sm" className="text-header-text hover:bg-white/10 ml-4" asChild>

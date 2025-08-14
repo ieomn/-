@@ -30,7 +30,7 @@ export const UserProfilePage = () => {
   const [localProfile, setLocalProfile] = useState({
     name: '',
     email: '',
-    company: '精密制造科技有限公司',
+    company: '通用技术集团机床工程研究院',
     department: '',
     position: '高级工程师'
   });
@@ -41,7 +41,7 @@ export const UserProfilePage = () => {
       setLocalProfile({
         name: authProfile.fullName || '',
         email: authProfile.email || '',
-        company: '精密制造科技有限公司',
+        company: '通用技术集团机床工程研究院',
         department: authProfile.department || '',
         position: '高级工程师'
       });
@@ -231,7 +231,7 @@ export const UserProfilePage = () => {
                     <Briefcase className="w-5 h-5 text-muted-foreground" />
                     <div>
                       <p className="text-sm text-muted-foreground">公司</p>
-                      <p className="font-medium">精密制造科技有限公司</p>
+                      <p className="font-medium">通用技术集团机床工程研究院</p>
                     </div>
                   </div>
                   <Separator />

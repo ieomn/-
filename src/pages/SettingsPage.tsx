@@ -23,7 +23,7 @@ export const SettingsPage = () => {
   const [profile, setProfile] = useState({
     name: user?.user_metadata?.name || '',
     email: user?.email || '',
-    company: '精密制造科技有限公司',
+    company: '通用技术集团机床工程研究院',
     position: '工程师'
   });
 
