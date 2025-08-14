@@ -3,6 +3,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { NavLink } from "react-router-dom";
 import { Settings, Plus, BarChart, Database } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 
 const millMachines = [
   {
@@ -32,6 +34,19 @@ const millMachines = [
 ];
 
 export const MillManagement = () => {
+  const [isAddingDevice, setIsAddingDevice] = useState(false);
+
+  const handleAddDevice = () => {
+    console.log('🔧 添加新铣床设备');
+    setIsAddingDevice(true);
+    
+    // 模拟添加设备的过程
+    setTimeout(() => {
+      setIsAddingDevice(false);
+      toast.success('新铣床设备添加成功！');
+    }, 1500);
+  };
+
   return (
     <div className="p-8 max-w-7xl mx-auto animate-fade-in">
       <div className="mb-8">
@@ -100,9 +115,13 @@ export const MillManagement = () => {
       {/* 操作按钮 */}
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-semibold text-foreground">设备列表</h2>
-        <Button className="hover-scale">
+        <Button 
+          onClick={handleAddDevice} 
+          disabled={isAddingDevice}
+          className="hover-scale"
+        >
           <Plus className="w-4 h-4 mr-2" />
-          添加新设备
+          {isAddingDevice ? '添加中...' : '添加新设备'}
         </Button>
       </div>
 

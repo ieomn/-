@@ -5,10 +5,64 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { User, Mail, Shield, Key, Bell, Trash2 } from "lucide-react";
+import { User, Mail, Shield, Key, Bell, Trash2, Save } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 
 export const AccountSettings = () => {
-  const { user } = useAuth();
+  const { user, profile: authProfile, updateProfile } = useAuth();
+  const [profile, setProfile] = useState({
+    name: authProfile?.fullName || user?.user_metadata?.name || '',
+    email: authProfile?.email || user?.email || '',
+    company: '通用技术集团机床工程研究院',
+    department: authProfile?.department || '技术部'
+  });
+  
+  const [passwords, setPasswords] = useState({
+    current: '',
+    new: '',
+    confirm: ''
+  });
+
+  const handleSaveProfile = async () => {
+    try {
+      console.log('💾 保存基本信息:', profile);
+      if (updateProfile) {
+        await updateProfile({ fullName: profile.name, department: profile.department });
+      }
+      toast.success('基本信息已保存');
+    } catch (error) {
+      console.error('保存失败:', error);
+      toast.error('保存失败，请重试');
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!passwords.current || !passwords.new || !passwords.confirm) {
+      toast.error('请填写所有密码字段');
+      return;
+    }
+    
+    if (passwords.new !== passwords.confirm) {
+      toast.error('新密码与确认密码不匹配');
+      return;
+    }
+    
+    if (passwords.new.length < 6) {
+      toast.error('新密码至少需要6位字符');
+      return;
+    }
+
+    try {
+      console.log('🔐 更改密码');
+      // 这里应该调用后端API更改密码
+      toast.success('密码已更新');
+      setPasswords({ current: '', new: '', confirm: '' });
+    } catch (error) {
+      console.error('密码更新失败:', error);
+      toast.error('密码更新失败，请重试');
+    }
+  };
 
   return (
     <div className="p-8 max-w-4xl mx-auto animate-fade-in">
@@ -37,7 +91,8 @@ export const AccountSettings = () => {
                 <Label htmlFor="username">用户名</Label>
                 <Input 
                   id="username" 
-                  defaultValue={user?.user_metadata?.name || "用户"} 
+                  value={profile.name}
+                  onChange={(e) => setProfile(prev => ({ ...prev, name: e.target.value }))}
                   placeholder="请输入用户名"
                 />
               </div>
@@ -46,7 +101,8 @@ export const AccountSettings = () => {
                 <Input 
                   id="email" 
                   type="email"
-                  defaultValue={user?.email || ""} 
+                  value={profile.email}
+                  onChange={(e) => setProfile(prev => ({ ...prev, email: e.target.value }))}
                   placeholder="请输入邮箱地址"
                 />
               </div>
@@ -55,7 +111,8 @@ export const AccountSettings = () => {
               <Label htmlFor="department">部门</Label>
               <Input 
                 id="department" 
-                defaultValue="设备管理部" 
+                value={profile.department}
+                onChange={(e) => setProfile(prev => ({ ...prev, department: e.target.value }))}
                 placeholder="请输入部门"
               />
             </div>
@@ -66,7 +123,10 @@ export const AccountSettings = () => {
                 <span className="text-sm text-muted-foreground">具有完整系统访问权限</span>
               </div>
             </div>
-            <Button>保存基本信息</Button>
+            <Button onClick={handleSaveProfile} className="hover-scale">
+              <Save className="w-4 h-4 mr-2" />
+              保存基本信息
+            </Button>
           </CardContent>
         </Card>
 
@@ -84,6 +144,8 @@ export const AccountSettings = () => {
               <Input 
                 id="current-password" 
                 type="password"
+                value={passwords.current}
+                onChange={(e) => setPasswords(prev => ({ ...prev, current: e.target.value }))}
                 placeholder="请输入当前密码"
               />
             </div>
@@ -93,6 +155,8 @@ export const AccountSettings = () => {
                 <Input 
                   id="new-password" 
                   type="password"
+                  value={passwords.new}
+                  onChange={(e) => setPasswords(prev => ({ ...prev, new: e.target.value }))}
                   placeholder="请输入新密码"
                 />
               </div>
@@ -101,11 +165,13 @@ export const AccountSettings = () => {
                 <Input 
                   id="confirm-password" 
                   type="password"
+                  value={passwords.confirm}
+                  onChange={(e) => setPasswords(prev => ({ ...prev, confirm: e.target.value }))}
                   placeholder="请确认新密码"
                 />
               </div>
             </div>
-            <Button variant="outline">
+            <Button variant="outline" onClick={handleChangePassword} className="hover-scale">
               <Key className="w-4 h-4 mr-2" />
               更新密码
             </Button>

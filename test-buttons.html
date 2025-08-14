@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>按钮功能测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .button:hover {
+            background: #0056b3;
+        }
+        .button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .success { background: #28a745; }
+        .warning { background: #ffc107; color: black; }
+        .danger { background: #dc3545; }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .file-input {
+            display: none;
+        }
+        .file-label {
+            background: #6c757d;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: inline-block;
+        }
+        .file-label:hover {
+            background: #545b62;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 按钮功能测试页面</h1>
+    <p>这个页面用于测试各种按钮和交互功能是否正常工作</p>
+
+    <div class="test-section">
+        <h2>📁 文件上传测试</h2>
+        <p>测试文件选择和上传功能</p>
+        
+        <input type="file" id="file-upload" class="file-input" multiple accept=".xlsx,.xls,.csv,.txt,.json,.pdf,.jpg,.jpeg,.png,.mp4,.avi,.mov">
+        <label for="file-upload" class="file-label">选择文件</label>
+        
+        <div id="file-list"></div>
+        
+        <button class="button success" onclick="testUpload()">开始上传</button>
+        <button class="button warning" onclick="clearFiles()">清空文件</button>
+    </div>
+
+    <div class="test-section">
+        <h2>👤 用户信息测试</h2>
+        <p>测试用户信息更新功能</p>
+        
+        <input type="text" id="username" placeholder="用户名" value="测试用户">
+        <input type="text" id="department" placeholder="部门" value="技术部">
+        
+        <button class="button success" onclick="saveProfile()">保存基本信息</button>
+        <button class="button warning" onclick="resetProfile()">重置信息</button>
+    </div>
+
+    <div class="test-section">
+        <h2>🔧 设备管理测试</h2>
+        <p>测试设备添加功能</p>
+        
+        <button class="button success" onclick="addDevice()">添加新设备</button>
+        <button class="button warning" onclick="resetDevice()">重置设备</button>
+    </div>
+
+    <div class="test-section">
+        <h2>📊 操作日志</h2>
+        <div id="log" class="log"></div>
+        <button class="button" onclick="clearLog()">清空日志</button>
+    </div>
+
+    <script>
+        let selectedFiles = [];
+        let isAddingDevice = false;
+
+        // 文件选择处理
+        document.getElementById('file-upload').addEventListener('change', function(e) {
+            const files = Array.from(e.target.files);
+            selectedFiles = files;
+            displayFiles(files);
+            log('文件选择成功', `选择了 ${files.length} 个文件`);
+        });
+
+        // 显示文件列表
+        function displayFiles(files) {
+            const fileList = document.getElementById('file-list');
+            if (files.length === 0) {
+                fileList.innerHTML = '<p>未选择文件</p>';
+                return;
+            }
+
+            let html = '<h3>已选择文件:</h3>';
+            files.forEach((file, index) => {
+                html += `
+                    <div style="border: 1px solid #ddd; padding: 10px; margin: 5px 0; border-radius: 4px;">
+                        <strong>${file.name}</strong><br>
+                        大小: ${formatFileSize(file.size)}<br>
+                        类型: ${file.type || '未知'}
+                    </div>
+                `;
+            });
+            fileList.innerHTML = html;
+        }
+
+        // 文件大小格式化
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // 测试上传功能
+        function testUpload() {
+            if (selectedFiles.length === 0) {
+                log('错误', '请先选择文件');
+                return;
+            }
+
+            log('开始上传', `开始处理 ${selectedFiles.length} 个文件`);
+            
+            // 模拟上传过程
+            selectedFiles.forEach((file, index) => {
+                setTimeout(() => {
+                    log('上传进度', `${file.name} - ${Math.round((index + 1) / selectedFiles.length * 100)}%`);
+                    
+                    if (index === selectedFiles.length - 1) {
+                        log('上传完成', '所有文件上传成功！');
+                    }
+                }, index * 500);
+            });
+        }
+
+        // 清空文件
+        function clearFiles() {
+            selectedFiles = [];
+            document.getElementById('file-upload').value = '';
+            document.getElementById('file-list').innerHTML = '<p>未选择文件</p>';
+            log('操作', '文件列表已清空');
+        }
+
+        // 保存用户信息
+        function saveProfile() {
+            const username = document.getElementById('username').value;
+            const department = document.getElementById('department').value;
+            
+            if (!username || !department) {
+                log('错误', '请填写完整信息');
+                return;
+            }
+
+            log('保存成功', `用户名: ${username}, 部门: ${department}`);
+            log('模拟', '信息已保存到数据库');
+        }
+
+        // 重置用户信息
+        function resetProfile() {
+            document.getElementById('username').value = '测试用户';
+            document.getElementById('department').value = '技术部';
+            log('操作', '用户信息已重置');
+        }
+
+        // 添加设备
+        function addDevice() {
+            if (isAddingDevice) {
+                log('操作', '设备添加中，请稍候...');
+                return;
+            }
+
+            isAddingDevice = true;
+            const button = event.target;
+            button.textContent = '添加中...';
+            button.disabled = true;
+
+            log('开始添加', '正在添加新设备...');
+
+            setTimeout(() => {
+                isAddingDevice = false;
+                button.textContent = '添加新设备';
+                button.disabled = false;
+                log('添加成功', '新设备添加成功！');
+            }, 2000);
+        }
+
+        // 重置设备状态
+        function resetDevice() {
+            isAddingDevice = false;
+            const button = document.querySelector('button[onclick="addDevice()"]');
+            button.textContent = '添加新设备';
+            button.disabled = false;
+            log('操作', '设备状态已重置');
+        }
+
+        // 日志记录
+        function log(type, message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${type}: ${message}`;
+            
+            logDiv.innerHTML += logEntry + '<br>';
+            logDiv.scrollTop = logDiv.scrollHeight;
+            
+            console.log(logEntry);
+        }
+
+        // 清空日志
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        // 页面加载完成
+        document.addEventListener('DOMContentLoaded', function() {
+            log('系统', '测试页面加载完成');
+            log('提示', '请测试各种按钮功能');
+        });
+    </script>
+</body>
+</html>

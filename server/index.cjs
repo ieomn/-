@@ -5,6 +5,11 @@
 
 const express = require('express');
 const cors = require('cors');
+const multer = require('multer');
+const XLSX = require('xlsx');
+const sharp = require('sharp');
+const fs = require('fs').promises;
+const path = require('path');
 const { PrismaClient } = require('@prisma/client');
 
 const app = express();
@@ -13,7 +18,18 @@ const PORT = process.env.PORT || 3001;
 
 // 中间件
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+
+// 创建上传目录
+const uploadsDir = path.join(__dirname, 'uploads');
+const thumbnailsDir = path.join(uploadsDir, 'thumbnails');
+
+// 确保上传目录存在
+fs.mkdir(uploadsDir, { recursive: true }).catch(console.error);
+fs.mkdir(thumbnailsDir, { recursive: true }).catch(console.error);
+
+// 配置静态文件服务
+app.use('/uploads', express.static(uploadsDir));
 
 // 错误处理中间件
 const asyncHandler = (fn) => (req, res, next) => {
@@ -55,11 +71,37 @@ app.put('/api/users/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
   const updates = req.body;
   
+  // 首先检查用户是否存在
+  const existingUser = await prisma.userProfile.findUnique({
+    where: { id }
+  });
+  
+  if (!existingUser) {
+    console.log(`❌ 用户不存在: ${id}`);
+    console.log('🔍 尝试查找所有用户...');
+    
+    // 查找所有用户，帮助调试
+    const allUsers = await prisma.userProfile.findMany({
+      select: { id: true, email: true, fullName: true, role: true }
+    });
+    console.log('📋 数据库中的用户:', allUsers);
+    
+    return res.status(404).json({ 
+      error: '用户不存在',
+      message: `ID为 ${id} 的用户未找到`,
+      availableUsers: allUsers
+    });
+  }
+  
+  console.log(`✅ 找到用户: ${existingUser.email} (${existingUser.fullName})`);
+  console.log(`🔄 更新内容:`, updates);
+  
   const user = await prisma.userProfile.update({
     where: { id },
     data: updates
   });
   
+  console.log(`✅ 用户更新成功: ${user.email}`);
   res.json(user);
 }));
 
@@ -166,21 +208,7 @@ app.get('/api/analysis/results', asyncHandler(async (req, res) => {
 
 // ==================== 文件相关API ====================
 
-// 获取上传文件
-app.get('/api/files', asyncHandler(async (req, res) => {
-  const files = await prisma.uploadedFile.findMany({
-    include: { uploader: true },
-    orderBy: { createdAt: 'desc' }
-  });
-  
-  // 解析JSON字符串字段
-  const parsedFiles = files.map(file => ({
-    ...file,
-    processingResults: file.processingResults ? JSON.parse(file.processingResults) : null
-  }));
-  
-  res.json(parsedFiles);
-}));
+// 文件路由模块将在服务器启动时异步加载
 
 // ==================== 系统统计API ====================
 
@@ -222,6 +250,16 @@ async function startServer() {
   try {
     await prisma.$connect();
     console.log('✅ 数据库连接成功');
+    
+    // 异步加载文件路由模块
+    try {
+      const fileRoutes = await import('./routes/files.js');
+      app.use('/api/files', fileRoutes.default);
+      console.log('✅ 文件路由模块加载成功');
+    } catch (error) {
+      console.error('❌ 文件路由模块加载失败:', error);
+      console.log('🔄 服务器将继续运行，但文件上传功能可能不可用');
+    }
     
     app.listen(PORT, () => {
       console.log(`🚀 API服务器运行在 http://localhost:${PORT}`);

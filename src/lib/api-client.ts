@@ -2,7 +2,9 @@
  * API客户端 - 替换直接数据库访问
  */
 
-const API_BASE_URL = 'http://localhost:3001/api';
+// 优先使用环境变量，其次回退到默认本地服务
+const API_BASE_URL = `${(typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL) ||
+  (typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:3001` : 'http://localhost:3001')}/api`;
 
 class ApiClient {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -107,6 +109,15 @@ class ApiClient {
   
   async getUploadedFiles() {
     return this.get('/files');
+  }
+
+  // ==================== 文件上传（Base64 简化版） ====================
+  async uploadFileBase64(params: { sessionId: string; fileName: string; mimeType: string; dataBase64: string; fileSize?: number }) {
+    return this.post('/files/upload-base64', params);
+  }
+
+  async processUploadedFile(fileId: string) {
+    return this.post(`/files/${fileId}/process`);
   }
 
   // ==================== 系统统计API ====================

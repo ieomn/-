@@ -152,9 +152,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       if (!profile) throw new Error('No user profile available')
       
-      const updatedProfile = { ...profile, ...updates, updatedAt: new Date() }
+      console.log('🔄 更新用户信息到数据库:', updates)
+      console.log('👤 当前用户信息:', profile)
+      
+      // 确保有有效的用户ID
+      let userId = profile.id;
+      
+      // 如果没有有效ID，先获取或创建管理员用户
+      if (!userId || userId.startsWith('user-')) {
+        console.log('🆔 用户ID无效，尝试获取管理员用户...');
+        
+        try {
+          const adminUser = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/users/demo`);
+          if (adminUser.ok) {
+            const adminData = await adminUser.json() as any;
+            userId = adminData.id;
+            console.log('✅ 获取到管理员用户ID:', userId);
+            
+            // 更新本地profile
+            setProfile(prev => ({ ...prev, id: userId }));
+          } else {
+            throw new Error('无法获取管理员用户');
+          }
+        } catch (error) {
+          console.error('获取管理员用户失败:', error);
+          throw new Error('无法获取有效的用户ID');
+        }
+      }
+      
+      console.log('🎯 使用用户ID:', userId);
+      
+      // 调用后端API更新数据库
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/users/${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updates)
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('API响应错误:', response.status, errorData);
+        throw new Error(`更新失败: ${response.statusText} - ${errorData.message || ''}`)
+      }
+      
+      const updatedProfile = await response.json()
       setProfile(updatedProfile)
       localStorage.setItem('demo_user', JSON.stringify(updatedProfile))
+      
+      console.log('✅ 用户信息已更新到数据库:', updatedProfile)
     } catch (error) {
       console.error('Update profile error:', error)
       throw error

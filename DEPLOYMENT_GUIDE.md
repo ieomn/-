@@ -152,7 +152,7 @@ PORT=3000
 VITE_PORT=5173
 
 # API 配置
-API_BASE_URL=http://localhost:3000
+
 VITE_API_URL=http://localhost:3000
 
 # 其他配置
@@ -718,7 +718,6 @@ PORT=3000
 VITE_PORT=5173
 
 # 可选变量
-API_BASE_URL=http://localhost:3000
 VITE_API_URL=http://localhost:3000
 LOG_LEVEL=info
 DEBUG=false

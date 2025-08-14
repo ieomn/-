@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>连接测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        button { padding: 10px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>🔧 前后端连接测试</h1>
+    
+    <div>
+        <button onclick="testBackend()">测试后端连接</button>
+        <button onclick="testUpload()">测试文件上传接口</button>
+        <button onclick="testFiles()">测试文件列表</button>
+    </div>
+    
+    <div id="results"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:3001/api';
+        
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            document.getElementById('results').appendChild(div);
+        }
+        
+        async function testBackend() {
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                log(`✅ 后端连接成功: ${data.message}`, 'success');
+            } catch (err) {
+                log(`❌ 后端连接失败: ${err.message}`, 'error');
+            }
+        }
+        
+        async function testFiles() {
+            try {
+                const response = await fetch(`${API_BASE}/files`);
+                const data = await response.json();
+                log(`✅ 文件列表获取成功，共 ${data.length} 个文件`, 'success');
+            } catch (err) {
+                log(`❌ 文件列表获取失败: ${err.message}`, 'error');
+            }
+        }
+        
+        async function testUpload() {
+            try {
+                const testData = {
+                    sessionId: 'test-session',
+                    fileName: 'test.txt',
+                    mimeType: 'text/plain',
+                    dataBase64: btoa('Hello World Test Content'),
+                    fileSize: 100
+                };
+                
+                const response = await fetch(`${API_BASE}/files/upload-base64`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(testData)
+                });
+                
+                const data = await response.json();
+                log(`✅ 上传测试成功，文件ID: ${data.id}`, 'success');
+                
+                // 测试处理
+                const processResponse = await fetch(`${API_BASE}/files/${data.id}/process`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const processData = await processResponse.json();
+                log(`✅ 处理测试成功，状态: ${processData.status}`, 'success');
+                
+            } catch (err) {
+                log(`❌ 上传测试失败: ${err.message}`, 'error');
+            }
+        }
+        
+        // 页面加载时自动测试后端连接
+        window.onload = () => {
+            log('🚀 页面加载完成，开始测试...');
+            testBackend();
+        };
+    </script>
+</body>
+</html>
